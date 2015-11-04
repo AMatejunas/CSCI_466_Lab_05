@@ -4,6 +4,8 @@ package dvr;
 import java.io.*;
 import java.net.*;
 
+import java.util.Arrays;
+
 public class DVR {
 
     public static void main(String[] args) throws Exception {
@@ -35,5 +37,17 @@ public class DVR {
             System.out.printf(", %d", vector[i]);
         }
         System.out.println(">");
+    }
+    
+    private static boolean updateDistanceVector(int[] myVector, int[] recVector, int recRouter) {
+        int[] testVector = Arrays.copyOf(myVector, myVector.length);
+        for (int i = 0; i < myVector.length; i++) {
+            myVector[i] = min(myVector[i], myVector[recRouter] + recVector[i]);
+        }
+        return Arrays.equals(myVector, testVector);
+    }
+    
+    private static int min(int num1, int num2) {
+        return (num1 < num2) ? num1 : num2;
     }
 }
