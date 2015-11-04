@@ -27,8 +27,13 @@ public class DVR {
            // Enter receive mode ad infinitum and update distance vector upon reception
     }
     
+    
+    // print out inputted distance vector
     public static void printDistanceVector(int[] vector) {
-        System.out.print("<");
-        //System.out.print(String.join(",", vector));
+        System.out.printf("<%d", vector[0]);
+        for(int i = 1; i < vector.length; i++) {
+            System.out.printf(", %d", vector[i]);
+        }
+        System.out.println(">");
     }
 }
