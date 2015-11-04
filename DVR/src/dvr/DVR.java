@@ -20,6 +20,11 @@ public class DVR {
            
            System.out.printf("Router %c is running on port %d\n", id, ports[me]);
            System.out.printf("Distance vector on router %c is:\n", id);
+           printDistanceVector(distVec);
+           
+           // Send distance vector to other two routers
+           
+           // Enter receive mode ad infinitum and update distance vector upon reception
     }
     
     public static void printDistanceVector(int[] vector) {
