@@ -10,16 +10,49 @@ public class DVR {
 
     public static void main(String[] args) throws Exception {
            System.out.print("Enter the rounter's ID: ");
+           BufferedReader buff = new BufferedReader(new InputStreamReader(System.in));
            
            // Read in router id
-           char id = 'X'; // place holder; my id
+           char id = buff.readLine().charAt(0); // place holder; my id
+           
+           int me = -1; // index of this router
+           if (id == 'X' || id == 'x') {
+               me = 0;
+           } else if (id == 'Y' || id == 'y') {
+               me = 1;
+           } else if (id == 'Z' || id == 'z') {
+               me = 2;
+           } else { // invalid id, exit program
+               System.out.println("Error: Invalid id");
+               System.exit(0);
+           }
            
            // Get port number and distance vector for this router and ports of
            // the other two routers
-           int[] ports = {6666, 6667, 6668}; // place holder; ports in network
-           int me = 0; // place holder; index of my port
-           int[] distVec = {0, 2, 7}; // place holder; my distance vector
+           FileReader file = new FileReader("configuration.txt");
            
+           buff = new BufferedReader(file);
+           
+           // Get port numbers
+           String line = buff.readLine();
+           String[] fileData = line.split("\\s+");
+           int[] ports = new int[fileData.length];
+           for (int i = 0; i < fileData.length; i++) {
+               ports[i] = Integer.valueOf(fileData[i]);
+           }
+           
+           // Get this router's distance vector
+           // Search through lines until find this router's distance vector
+           for (int i = 0; i <= me; i++) {
+               line = buff.readLine();
+           }
+           fileData = line.split("\\s+");
+           int[] distVec = new int[fileData.length]; // place holder; my distance vector
+           for (int i = 0; i < fileData.length; i++) {
+               distVec[i] = Integer.valueOf(fileData[i]);
+           }
+           
+           // Print this router's info
            System.out.printf("Router %c is running on port %d\n", id, ports[me]);
            System.out.printf("Distance vector on router %c is:\n", id);
            printDistanceVector(distVec);
@@ -39,6 +72,7 @@ public class DVR {
         System.out.println(">");
     }
     
+    // updates this server's distance vector based on received info and returns whether nor not a value was changed
     private static boolean updateDistanceVector(int[] myVector, int[] recVector, int recRouter) {
         int[] testVector = Arrays.copyOf(myVector, myVector.length);
         for (int i = 0; i < myVector.length; i++) {
