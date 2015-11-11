@@ -3,6 +3,9 @@ package dvr;
 // Imports
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.IntBuffer;
 
 import java.util.Arrays;
 import java.util.TimerTask;
@@ -84,13 +87,33 @@ public class DVR {
            
            // Initialize socket
            byte[] receiveData = new byte[12];
+           DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
            DatagramSocket senderSocket = new DatagramSocket(ports[me]);
            
            // Send distance vector to other two routers
-           sendDistanceVector(distVec, me);
+           sendDistanceVector(distVec, me, senderSocket);
            // Enter receive mode ad infinitum and update distance vector upon reception
            while(true) {
-               
+               receiveData = receivePacket.getData();
+               // Set up a int buffer to convert bytes to ints
+               IntBuffer intBuf = ByteBuffer.wrap(receiveData).order(ByteOrder.BIG_ENDIAN).asIntBuffer();
+               // Fill the new vector with the ints
+               int[] tempVec = new int[intBuf.remaining()];
+               // Check to see if an update occurred
+               boolean update = false;
+               for (int i = 0; i < tempVec.length && tempVec.length == distVec.length; i++) {
+                   // See if a shorter path is present
+                   // Oops, kind of did this before I realize what you implemented
+                   // with update distance vector.
+                   if (distVec[i] > tempVec[me] + tempVec[i]) {
+                       distVec[i] = tempVec[me] + tempVec[i];
+                       update = true;
+                   }
+               }
+               if (update) {
+                   // send data to other sockets and return to receive state
+                   sendDistanceVector(distVec, me, senderSocket);
+               }
            }
     }
     
@@ -105,10 +128,28 @@ public class DVR {
     }
     
     // Sends a distance vector to the other two vectors
-    private static void sendDistanceVector(int[] vector, int id) {
+    private static void sendDistanceVector(int[] vector, int id, DatagramSocket sender) {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(baos);
+    // Write the input vector to a data stream
+    try {
+        for(int i : vector) {
+            dos.writeInt(i);
+        }
+    } catch (Exception e) {
+        System.err.printf("%n%nA fatal error occurred!%n%n");
+        e.printStackTrace();
+        System.exit(1);
+    }
+    
+    byte[] sendData = baos.toByteArray();
         for (int i = 0; i < 3; i++) {
             if (i != id) {
-                
+                try {
+                    sendPacket(0, sendData, sender, false, ports[i]);
+                } catch (Exception e) {
+                    System.out.printf("%nSomething bad happened while trying to send the packet, carry on%n");
+                }
             }
         }
     }
@@ -127,11 +168,11 @@ public class DVR {
     }
     
        // sends packet and sets up timer
-    public static void sendPacket(int seq, byte[] sendData, DatagramSocket senderSocket, boolean drop)
+    public static void sendPacket(int seq, byte[] sendData, DatagramSocket senderSocket, boolean drop, int portNumber)
             throws Exception {
         final int seqFinal = seq;
         final byte[] sendDataFinal = sendData;
-        final DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAdress, 9876);
+        final DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAdress, portNumber);
         if (!drop) {
             senderSocket.send(sendPacket);
         }
@@ -142,7 +183,7 @@ public class DVR {
             public void run() {
                 try {
                     System.out.println("Packet " + seqFinal + " times out, resend packet " + seqFinal);
-                    sendPacket(seqFinal, sendDataFinal, senderSocket, false);
+                    sendPacket(seqFinal, sendDataFinal, senderSocket, false, portNumber);
                 } catch (Exception e) {
 
                 }
@@ -153,7 +194,7 @@ public class DVR {
     }
 
     // sends all packets in window that have not yet been sent
-    public static void sendWindow(DatagramSocket senderSocket)
+    public static void sendWindow(DatagramSocket senderSocket, int portNumber)
             throws Exception {
         for (int i = windowIndex; i < windowIndex + windowSize; i++) {
             if (i >= maxSeq) {
@@ -163,7 +204,7 @@ public class DVR {
                 String sentence = String.valueOf(i);
                 sendData = sentence.getBytes();
                
-                sendPacket(i, sendData, senderSocket, false);              
+                sendPacket(i, sendData, senderSocket, false, portNumber);              
             }
         }
     }
