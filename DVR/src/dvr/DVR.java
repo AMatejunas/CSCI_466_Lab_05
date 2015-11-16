@@ -28,7 +28,9 @@ public class DVR {
     private static InetAddress IPAdress;    // holds the IPAddress of the system
     private static Timer[] timers = new Timer[2];          // holds the timers for each packet
     private static int[] ports;
-
+    private static int[] neighVec;
+    private static int[][] distVecs;
+    
     final static int X = 0;
     final static int Y = 1;
     final static int Z = 2;
@@ -75,15 +77,25 @@ public class DVR {
             line = buff.readLine();
         }
         fileData = line.split("\\s+");
-        int[] distVec = new int[fileData.length]; // place holder; my distance vector
+        int[] myDistVec = new int[fileData.length]; // place holder; my distance vector
         for (int i = 0; i < fileData.length; i++) {
-            distVec[i] = Integer.valueOf(fileData[i]);
+            myDistVec[i] = Integer.valueOf(fileData[i]);
+        }
+        neighVec = Arrays.copyOf(myDistVec, myDistVec.length);
+        distVecs = new int[fileData.length][fileData.length];
+        int[] infVector = {Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE};
+        for (int i = 0; i < fileData.length; i++) {
+            if (i == me) {
+                distVecs[i] = myDistVec;
+            } else {
+                distVecs[i] = Arrays.copyOf(infVector, infVector.length);
+            }
         }
 
         // Print this router's info
         System.out.printf("Router %c is running on port %d\n", id, ports[me]);
         System.out.printf("Distance vector on router %c is:\n", id);
-        printDistanceVector(distVec);
+        printDistanceVector(myDistVec);
 
         // Initialize socket
         byte[] receiveData = new byte[16];
@@ -92,7 +104,7 @@ public class DVR {
         IPAdress = InetAddress.getByName("localhost");
 
         // Send distance vector to other two routers
-        sendDistanceVector(distVec, me, senderSocket);
+        sendDistanceVector(myDistVec, me, senderSocket);
         // Enter receive mode ad infinitum and update distance vector upon reception
         while (true) {
             senderSocket.receive(receivePacket);
@@ -121,15 +133,16 @@ public class DVR {
                 System.out.printf("Receives distance vector from router %c: ", recIDChar);
                 printDistanceVector(tempVec);
                 // Check to see if an update occurred
-                boolean update = updateDistanceVector(distVec, tempVec, recID);
+                distVecs[recID] = tempVec;
+                boolean update = updateDistanceVector(myDistVec, recID);
                 char myId = ids[me];
                 if (update) {
                     System.out.printf("Distance vector on router %c is updated to:\n", myId);
-                    printDistanceVector(distVec);
+                    printDistanceVector(myDistVec);
+                    sendDistanceVector(myDistVec, me, senderSocket);
                 } else {
                     System.out.printf("Distance vector on router %c is not updated\n", myId);
                 }
-                sendDistanceVector(distVec, me, senderSocket);
             }
 
             receiveData = new byte[16];
@@ -175,16 +188,22 @@ public class DVR {
     }
 
     // updates this server's distance vector based on received info and returns whether nor not a value was changed
-    private static boolean updateDistanceVector(int[] myVector, int[] recVector, int recRouter) {
+    private static boolean updateDistanceVector(int[] myVector, int recRouter) {
         int[] testVector = Arrays.copyOf(myVector, myVector.length);
         for (int i = 0; i < myVector.length; i++) {
-            myVector[i] = min(myVector[i], myVector[recRouter] + recVector[i]);
+            int value = neighVec[i];
+            for (int j = 0; j < myVector.length; j++) {
+                int newValue = neighVec[j] + distVecs[j][recRouter];
+                if (newValue < 0) {
+                    newValue = Integer.MAX_VALUE;
+                }
+                if (newValue < value) {
+                    value = neighVec[j] + distVecs[j][recRouter];
+                }
+            }
+            myVector[i] = value;
         }
         return !Arrays.equals(myVector, testVector);
-    }
-
-    private static int min(int num1, int num2) {
-        return Math.min(num1, num2);
     }
 
     // sends packet and sets up timer
