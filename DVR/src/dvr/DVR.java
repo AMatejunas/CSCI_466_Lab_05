@@ -41,14 +41,14 @@ public class DVR {
 
         // Read in router id
         char id = buff.readLine().charAt(0); // place holder; my id
-        id = Character.toLowerCase(id);      // Forced formatting
+        id = Character.toUpperCase(id);      // Forced formatting
         me = -1; // index of this router
 
-        if (id == 'x') {
+        if (id == 'X') {
             me = X;
-        } else if (id == 'y') {
+        } else if (id == 'X') {
             me = Y;
-        } else if (id == 'z') {
+        } else if (id == 'X') {
             me = Z;
         } else { // invalid id, exit program
             System.out.println("Error: Invalid id");
