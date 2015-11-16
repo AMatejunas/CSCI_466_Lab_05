@@ -89,15 +89,18 @@ public class DVR {
         byte[] receiveData = new byte[16];
         DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
         DatagramSocket senderSocket = new DatagramSocket(ports[me]);
-        IPAdress = InetAddress.getByName("LAPTOP-04IVMF2O");
+        IPAdress = InetAddress.getByName("localhost");
 
         // Send distance vector to other two routers
         sendDistanceVector(distVec, me, senderSocket);
         // Enter receive mode ad infinitum and update distance vector upon reception
         while (true) {
+            senderSocket.receive(receivePacket);
             receiveData = receivePacket.getData();
-            // Set up a int buffer to convert bytes to ints
+
+            // Set up a buffer to convert bytes to ints
             ByteBuffer wrapped = ByteBuffer.wrap(receiveData);
+
             // Fill the new vector with the ints
             int recID = wrapped.getInt();
             int[] tempVec = new int[3];
@@ -105,8 +108,7 @@ public class DVR {
                 tempVec[i] = wrapped.getInt();
             }
             int[] testVec = {0, 0, 0};
-            if (!Arrays.equals(tempVec, testVec))
-            {
+            if (!Arrays.equals(tempVec, testVec)) {
                 char recIDChar = '-';
                 if (recID == 0) {
                     recIDChar = 'X';
@@ -128,8 +130,9 @@ public class DVR {
                     System.out.printf("Distance vector on router %c is not updated\n", myId);
                 }
                 sendDistanceVector(distVec, me, senderSocket);
-                receiveData = new byte[16];
             }
+
+            receiveData = new byte[16];
         }
     }
 
