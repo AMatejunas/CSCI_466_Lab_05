@@ -48,9 +48,9 @@ public class DVR {
 
         if (id == 'X') {
             me = X;
-        } else if (id == 'X') {
+        } else if (id == 'Y') {
             me = Y;
-        } else if (id == 'X') {
+        } else if (id == 'Z') {
             me = Z;
         } else { // invalid id, exit program
             System.out.println("Error: Invalid id");
