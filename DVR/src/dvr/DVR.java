@@ -14,6 +14,7 @@ public class DVR {
     private static byte[] sendData;         // data to be sent
 
     private static boolean[] sequenceAck;   // holds whether each packet has been acknowledged
+    final static int ROUTERS = 3; // the number of routers in the network
     
     private static int me;
 
@@ -60,8 +61,8 @@ public class DVR {
         // Get port numbers
         String line = buff.readLine();
         String[] fileData = line.split("\\s+");
-        ports = new int[fileData.length];
-        for (int i = 0; i < fileData.length; i++) {
+        ports = new int[ROUTERS];
+        for (int i = 0; i < ports.length; i++) {
             ports[i] = Integer.valueOf(fileData[i]);
         }
 
@@ -72,16 +73,20 @@ public class DVR {
         }
         fileData = line.split("\\s+");
         int[] myDistVec = new int[fileData.length]; // place holder; my distance vector
-        for (int i = 0; i < fileData.length; i++) {
-            myDistVec[i] = Integer.valueOf(fileData[i]);
+        distVecs = new int[ROUTERS][ROUTERS];
+        
+        // make my distance vector
+        for (int i = 0; i < distVecs[me].length; i++) {
+            distVecs[me][i] = Integer.valueOf(fileData[i]);
         }
-        neighVec = Arrays.copyOf(myDistVec, myDistVec.length);
-        distVecs = new int[fileData.length][fileData.length];
-        int[] infVector = {Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE};
-        for (int i = 0; i < fileData.length; i++) {
-            if (i == me) {
-                distVecs[i] = myDistVec;
-            } else {
+        neighVec = Arrays.copyOf(distVecs[me], distVecs[me].length);
+
+        int[] infVector = new int[ROUTERS];
+        for (int i = 0; i < infVector.length; i++) {
+            infVector[i] = Integer.MAX_VALUE;
+        }
+        for (int i = 0; i < distVecs.length; i++) {
+            if (i != me) {
                 distVecs[i] = Arrays.copyOf(infVector, infVector.length);
             }
         }
@@ -114,15 +119,15 @@ public class DVR {
             if (ack == 1) {
                 if (wrapped.getInt() == seq) {
                     // Cancel appropriate timer
-                    if (recID == (me + 1) % 3) {
-                        timers[0].cancel();
-                    } else if (recID == (me + 2) % 3) {
-                        timers[1].cancel();
+                    for (int i = 1; i < ROUTERS; i++) {
+                        if (recID == (me + i) % ROUTERS) {
+                            timers[i - 1].cancel();
+                        }
                     }
                 }
             } else {
                 int recSeq = wrapped.getInt(); // grab sequence number
-                int[] tempVec = new int[3];
+                int[] tempVec = new int[ROUTERS];
                 for (int i = 0; i < tempVec.length; i++) {
                     tempVec[i] = wrapped.getInt();
                 }
@@ -206,9 +211,8 @@ public class DVR {
         }
 
         sendData = b.array();
-        //System.out.println(sendData[2]);
-        for (int i = 0; i < 3; i++) {
-            if (i != id) {
+        for (int i = 0; i < ROUTERS; i++) {
+            if (i != me) {
                 try {
                     sendPacket(0, sendData, sender, ports[i]);
                 } catch (Exception e) {
@@ -257,18 +261,14 @@ public class DVR {
                 }
             }
         };
-        if (portNumber == ports[(me + 1) % 3]) {
-            if (timers[0] != null) {
-                timers[0].cancel();
+        for (int i = 0; i < ROUTERS - 1; i++) {
+            if (dest == ports[(me + i + 1) % ROUTERS]) {
+                if (timers[i] != null) {
+                    timers[i].cancel();
+                }
+                timers[i] = new Timer();
+                timers[i].schedule(timerTask, 1000); 
             }
-            timers[0] = new Timer();
-            timers[0].schedule(timerTask, 1000);
-        } else if (portNumber == ports[(me + 2) % 3]) {
-            if (timers[1] != null) {
-                timers[1].cancel();
-            }
-            timers[1] = new Timer();
-            timers[1].schedule(timerTask, 1000);
         }
     }
 }
