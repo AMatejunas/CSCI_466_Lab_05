@@ -193,12 +193,12 @@ public class DVR {
         for (int i = 0; i < myVector.length; i++) {
             int value = neighVec[i];
             for (int j = 0; j < myVector.length; j++) {
-                int newValue = neighVec[j] + distVecs[j][recRouter];
+                int newValue = neighVec[j] + distVecs[j][i];
                 if (newValue < 0) {
                     newValue = Integer.MAX_VALUE;
                 }
                 if (newValue < value) {
-                    value = neighVec[j] + distVecs[j][recRouter];
+                    value = newValue;
                 }
             }
             myVector[i] = value;
