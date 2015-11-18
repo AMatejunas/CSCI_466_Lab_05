@@ -71,7 +71,6 @@ public class DVR {
             line = buff.readLine();
         }
         fileData = line.split("\\s+");
-        int[] myDistVec = new int[fileData.length]; // place holder; my distance vector
         distVecs = new int[ROUTERS][ROUTERS];
         
         // make my distance vector
@@ -93,19 +92,19 @@ public class DVR {
         // Print this router's info
         System.out.printf("Router %c is running on port %d\n", id, ports[me]);
         System.out.printf("Distance vector on router %c is:\n", id);
-        printDistanceVector(myDistVec);
+        printDistanceVector(distVecs[me]);
 
         // Initialize socket
         byte[] receiveData = new byte[24];
         DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-        DatagramSocket senderSocket = new DatagramSocket(ports[me]);
+        DatagramSocket socket = new DatagramSocket(ports[me]);
         IPAdress = InetAddress.getByName("localhost");
 
         // Send distance vector to other two routers
-        sendDistanceVector(myDistVec, me, senderSocket);
+        sendDistanceVector(socket);
         // Enter receive mode ad infinitum and update distance vector upon reception
         while (true) {
-            senderSocket.receive(receivePacket);
+            socket.receive(receivePacket);
             receiveData = receivePacket.getData();
 
             // Set up a buffer to convert bytes to ints
@@ -130,7 +129,7 @@ public class DVR {
                 for (int i = 0; i < tempVec.length; i++) {
                     tempVec[i] = wrapped.getInt();
                 }
-                sendAck(me, recSeq, ports[recID], senderSocket);
+                sendAck(recSeq, ports[recID], socket); // send acknowledgement
                 int[] testVec = {0, 0, 0};
                 if (!Arrays.equals(tempVec, testVec)) {
                     char recIDChar = '-';
@@ -146,12 +145,12 @@ public class DVR {
                     printDistanceVector(tempVec);
                     // Check to see if an update occurred
                     distVecs[recID] = tempVec;
-                    boolean update = updateDistanceVector(myDistVec, recID);
                     char myId = ids[me];
+                    boolean update = updateDistanceVector();
                     if (update) {
                         System.out.printf("Distance vector on router %c is updated to:\n", myId);
-                        printDistanceVector(myDistVec);
-                        sendDistanceVector(myDistVec, me, senderSocket);
+                        printDistanceVector(distVecs[me]);
+                        sendDistanceVector(socket);
                     } else {
                         System.out.printf("Distance vector on router %c is not updated\n", myId);
                     }
@@ -172,13 +171,13 @@ public class DVR {
     }
 
     // Sends an acknowledgement packet
-    private static void sendAck(int id, int seq, int portNumber, DatagramSocket sender)
+    private static void sendAck(int seq, int dest, DatagramSocket sender)
             throws Exception {
 
         ByteBuffer b = ByteBuffer.allocate(24);
 
         try {
-            b.putInt(id);
+            b.putInt(me);
             b.putInt(1); // this is an ack
             b.putInt(seq); // put seq number to acknowledge in packet
         } catch (Exception e) {
@@ -188,19 +187,19 @@ public class DVR {
         }
 
         sendData = b.array();
-        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAdress, portNumber);
+        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAdress, dest);
         sender.send(sendPacket);
     }
 
     // Sends a distance vector to the other two vectors
-    private static void sendDistanceVector(int[] vector, int id, DatagramSocket sender) {
+    private static void sendDistanceVector(DatagramSocket sender) {
         ByteBuffer b = ByteBuffer.allocate(24);
         // Write the input vector to a data stream
         try {
-            b.putInt(id);
+            b.putInt(me);
             b.putInt(0); // this is not an ack
             b.putInt(++seq); // increment sequence number and put in buffer
-            for (int i : vector) {
+            for (int i : distVecs[me]) {
                 b.putInt(i);
             }
         } catch (Exception e) {
@@ -223,11 +222,11 @@ public class DVR {
     }
 
     // updates this server's distance vector based on received info and returns whether nor not a value was changed
-    private static boolean updateDistanceVector(int[] myVector, int recRouter) {
-        int[] testVector = Arrays.copyOf(myVector, myVector.length);
-        for (int i = 0; i < myVector.length; i++) {
+    private static boolean updateDistanceVector() {
+        int[] testVector = Arrays.copyOf(distVecs[me], distVecs[me].length);
+        for (int i = 0; i < distVecs[me].length; i++) {
             int value = neighVec[i];
-            for (int j = 0; j < myVector.length; j++) {
+            for (int j = 0; j < distVecs[me].length; j++) {
                 int newValue = neighVec[j] + distVecs[j][i];
                 if (newValue < 0) {
                     newValue = Integer.MAX_VALUE;
@@ -236,17 +235,17 @@ public class DVR {
                     value = newValue;
                 }
             }
-            myVector[i] = value;
+            distVecs[me][i] = value;
         }
-        return !Arrays.equals(myVector, testVector);
+        return !Arrays.equals(distVecs[me], testVector);
     }
 
     // sends packet and sets up timer
-    public static void sendPacket(int seq, byte[] sendData, DatagramSocket senderSocket, int portNumber)
+    public static void sendPacket(int seq, byte[] sendData, DatagramSocket senderSocket, int dest)
             throws Exception {
         final int seqFinal = seq;
         final byte[] sendDataFinal = sendData;
-        final DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAdress, portNumber);
+        final DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAdress, dest);
         senderSocket.send(sendPacket);
 
         TimerTask timerTask = new TimerTask() {
@@ -254,7 +253,7 @@ public class DVR {
             public void run() {
                 try {
                     //System.out.println("Packet " + seqFinal + " times out, resend packet " + seqFinal);
-                    sendPacket(seqFinal, sendDataFinal, senderSocket, portNumber);
+                    sendPacket(seqFinal, sendDataFinal, senderSocket, dest);
                 } catch (Exception e) {
 
                 }
