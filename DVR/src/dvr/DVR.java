@@ -154,7 +154,7 @@ public class DVR {
                 }
             }
 
-            receiveData = new byte[16];
+            receiveData = new byte[24];
         }
     }
 
