@@ -10,27 +10,26 @@ import java.util.TimerTask;
 import java.util.Timer;
 
 public class DVR {
-
-    private static byte[] sendData;         // data to be sent
-
-    private static boolean[] sequenceAck;   // holds whether each packet has been acknowledged
     final static int ROUTERS = 3; // the number of routers in the network
     
-    private static int me;
-
-    private static InetAddress IPAdress;    // holds the IPAddress of the system
-    private static Timer[] timers = new Timer[2];          // holds the timers for each packet
-    private static int[] ports;
-    private static int[] neighVec;
-    private static int[][] distVecs;
-
-    private static int seq = -1;
-
+    // the indices of each id in the ports, neighVec and distVecs arrays
     final static int X = 0;
     final static int Y = 1;
     final static int Z = 2;
+    
+    
+    private static int me;                  // my index for the ports, neighVec and distVecs arrays
+
+    private static int[] ports;             // the ports to be used
+    private static int[] neighVec;          // the direct cost to each neighbor
+    private static int[][] distVecs;        // the shortest distance cost vector to each node from each node
 
     final static char[] ids = {'X', 'Y', 'Z'};
+    
+    private static byte[] sendData;         // data to be sent
+    private static InetAddress IPAdress;    // holds the IPAddress of the system
+    private static Timer[] timers = new Timer[2];          // holds the timers for most recently sent packet to each neighbor
+    private static int seq = -1;            // the value of the most recently sent sequence number, initialized to none sent
 
     public static void main(String[] args) throws Exception {
         System.out.print("Enter the router's ID: ");
