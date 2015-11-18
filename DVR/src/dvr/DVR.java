@@ -215,29 +215,26 @@ public class DVR {
         if (!drop) {
             senderSocket.send(sendPacket);
         }
+
+        TimerTask timerTask = new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    //System.out.println("Packet " + seqFinal + " times out, resend packet " + seqFinal);
+                    sendPacket(seqFinal, sendDataFinal, senderSocket, false, portNumber);
+                } catch (Exception e) {
+
+                }
+            }
+        };
         if (portNumber == ports[(me + 1) % 3]) {
             sent[0] = true;
             timers[0] = new Timer();
+            timers[0].schedule(timerTask, 1000);
         } else if (portNumber == ports[(me + 2) % 3]) {
             sent[1] = true;
             timers[1] = new Timer();
+            timers[1].schedule(timerTask, 1000);
         }
-
-//        TimerTask timerTask = new TimerTask() {
-//            @Override
-//            public void run() {
-//                try {
-//                    //System.out.println("Packet " + seqFinal + " times out, resend packet " + seqFinal);
-//                    sendPacket(seqFinal, sendDataFinal, senderSocket, false, portNumber);
-//                } catch (Exception e) {
-//
-//                }
-//            }
-//        };
-//        if (portNumber == ports[(me + 1) % 3]) {
-//            timers[0].schedule(timerTask, 1000);
-//        } else if (portNumber == ports[(me + 2) % 3]) {
-//            timers[1].schedule(timerTask, 1000);
-//        }
     }
 }
