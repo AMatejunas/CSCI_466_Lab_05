@@ -4,8 +4,6 @@ package dvr;
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.IntBuffer;
 
 import java.util.Arrays;
 import java.util.TimerTask;
@@ -16,13 +14,7 @@ public class DVR {
     private static byte[] sendData;         // data to be sent
 
     private static boolean[] sequenceAck;   // holds whether each packet has been acknowledged
-    private static boolean[] sent = new boolean[2];          // holds whether each packet has been sent
-
-    //private static int dropped;             // the packet to be dropped
-    //private static int maxSeq;              // holds the maximum sequence number
-    private static int windowSize = 1;          // holds the size of the window
-    private static int windowIndex = 0;         // holds the index of the first packet in the window
-    private static int maxSeq = 1;              // holds the maximum sequence number
+    
     private static int me;
 
     private static InetAddress IPAdress;    // holds the IPAddress of the system
@@ -124,10 +116,8 @@ public class DVR {
                     // Cancel appropriate timer
                     if (recID == (me + 1) % 3) {
                         timers[0].cancel();
-                        sent[0] = false;
                     } else if (recID == (me + 2) % 3) {
                         timers[1].cancel();
-                        sent[1] = false;
                     }
                 }
             } else {
@@ -268,14 +258,12 @@ public class DVR {
             }
         };
         if (portNumber == ports[(me + 1) % 3]) {
-            sent[0] = true;
             if (timers[0] != null) {
                 timers[0].cancel();
             }
             timers[0] = new Timer();
             timers[0].schedule(timerTask, 1000);
         } else if (portNumber == ports[(me + 2) % 3]) {
-            sent[1] = true;
             if (timers[1] != null) {
                 timers[1].cancel();
             }
