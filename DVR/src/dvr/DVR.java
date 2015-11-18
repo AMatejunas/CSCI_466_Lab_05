@@ -30,7 +30,7 @@ public class DVR {
     private static int[] ports;
     private static int[] neighVec;
     private static int[][] distVecs;
-    
+
     final static int X = 0;
     final static int Y = 1;
     final static int Z = 2;
@@ -38,7 +38,7 @@ public class DVR {
     final static char[] ids = {'X', 'Y', 'Z'};
 
     public static void main(String[] args) throws Exception {
-        System.out.print("Enter the rounter's ID: ");
+        System.out.print("Enter the router's ID: ");
         BufferedReader buff = new BufferedReader(new InputStreamReader(System.in));
 
         // Read in router id
