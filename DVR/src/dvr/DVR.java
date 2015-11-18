@@ -31,6 +31,8 @@ public class DVR {
     private static int[] neighVec;
     private static int[][] distVecs;
 
+    private static int seq = -1;
+
     final static int X = 0;
     final static int Y = 1;
     final static int Z = 2;
@@ -118,22 +120,23 @@ public class DVR {
 
             int ack = wrapped.getInt(); // get whether this is an ack or not
             if (ack == 1) {
-                // Cancel appropriate timer
-                //System.out.printf("Ack received from router: %d\n", recID);
-                if (recID == (me + 1) % 3) {
-                    timers[0].cancel();
-                    sent[0] = false;
-                } else if (recID == (me + 2) % 3) {
-                    timers[1].cancel();
-                    sent[1] = false;
+                if (wrapped.getInt() == seq) {
+                    // Cancel appropriate timer
+                    if (recID == (me + 1) % 3) {
+                        timers[0].cancel();
+                        sent[0] = false;
+                    } else if (recID == (me + 2) % 3) {
+                        timers[1].cancel();
+                        sent[1] = false;
+                    }
                 }
             } else {
-                wrapped.getInt(); // throw away currently unused seq number
+                int recSeq = wrapped.getInt(); // grab sequence number
                 int[] tempVec = new int[3];
                 for (int i = 0; i < tempVec.length; i++) {
                     tempVec[i] = wrapped.getInt();
                 }
-                sendAck(me, 0, ports[recID], senderSocket);
+                sendAck(me, recSeq, ports[recID], senderSocket);
                 int[] testVec = {0, 0, 0};
                 if (!Arrays.equals(tempVec, testVec)) {
                     char recIDChar = '-';
@@ -202,7 +205,7 @@ public class DVR {
         try {
             b.putInt(id);
             b.putInt(0); // this is not an ack
-            b.putInt(0); // put sequence number, not used currently 
+            b.putInt(++seq); // increment sequence number and put in buffer
             for (int i : vector) {
                 b.putInt(i);
             }
