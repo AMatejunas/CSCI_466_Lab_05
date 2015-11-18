@@ -98,7 +98,7 @@ public class DVR {
         printDistanceVector(myDistVec);
 
         // Initialize socket
-        byte[] receiveData = new byte[16];
+        byte[] receiveData = new byte[24];
         DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
         DatagramSocket senderSocket = new DatagramSocket(ports[me]);
         IPAdress = InetAddress.getByName("localhost");
@@ -115,33 +115,49 @@ public class DVR {
 
             // Fill the new vector with the ints
             int recID = wrapped.getInt();
-            int[] tempVec = new int[3];
-            for (int i = 0; i < tempVec.length; i++) {
-                tempVec[i] = wrapped.getInt();
-            }
-            int[] testVec = {0, 0, 0};
-            if (!Arrays.equals(tempVec, testVec)) {
-                char recIDChar = '-';
-                if (recID == 0) {
-                    recIDChar = 'X';
-                } else if (recID == 1) {
-                    recIDChar = 'Y';
-                } else if (recID == 2) {
-                    recIDChar = 'Z';
-                }
 
-                System.out.printf("Receives distance vector from router %c: ", recIDChar);
-                printDistanceVector(tempVec);
-                // Check to see if an update occurred
-                distVecs[recID] = tempVec;
-                boolean update = updateDistanceVector(myDistVec, recID);
-                char myId = ids[me];
-                if (update) {
-                    System.out.printf("Distance vector on router %c is updated to:\n", myId);
-                    printDistanceVector(myDistVec);
-                    sendDistanceVector(myDistVec, me, senderSocket);
-                } else {
-                    System.out.printf("Distance vector on router %c is not updated\n", myId);
+            int ack = wrapped.getInt(); // get whether this is an ack or not
+            if (ack == 1) {
+                // Cancel appropriate timer
+                //System.out.printf("Ack received from router: %d\n", recID);
+                if (recID == (me + 1) % 3) {
+                    timers[0].cancel();
+                    sent[0] = false;
+                } else if (recID == (me + 2) % 3) {
+                    timers[1].cancel();
+                    sent[1] = false;
+                }
+            } else {
+                wrapped.getInt(); // throw away currently unused seq number
+                int[] tempVec = new int[3];
+                for (int i = 0; i < tempVec.length; i++) {
+                    tempVec[i] = wrapped.getInt();
+                }
+                sendAck(me, 0, ports[recID], senderSocket);
+                int[] testVec = {0, 0, 0};
+                if (!Arrays.equals(tempVec, testVec)) {
+                    char recIDChar = '-';
+                    if (recID == 0) {
+                        recIDChar = 'X';
+                    } else if (recID == 1) {
+                        recIDChar = 'Y';
+                    } else if (recID == 2) {
+                        recIDChar = 'Z';
+                    }
+
+                    System.out.printf("Receives distance vector from router %c: ", recIDChar);
+                    printDistanceVector(tempVec);
+                    // Check to see if an update occurred
+                    distVecs[recID] = tempVec;
+                    boolean update = updateDistanceVector(myDistVec, recID);
+                    char myId = ids[me];
+                    if (update) {
+                        System.out.printf("Distance vector on router %c is updated to:\n", myId);
+                        printDistanceVector(myDistVec);
+                        sendDistanceVector(myDistVec, me, senderSocket);
+                    } else {
+                        System.out.printf("Distance vector on router %c is not updated\n", myId);
+                    }
                 }
             }
 
@@ -158,12 +174,35 @@ public class DVR {
         System.out.println(">");
     }
 
+    // Sends an acknowledgement packet
+    private static void sendAck(int id, int seq, int portNumber, DatagramSocket sender)
+            throws Exception {
+
+        ByteBuffer b = ByteBuffer.allocate(24);
+
+        try {
+            b.putInt(id);
+            b.putInt(1); // this is an ack
+            b.putInt(seq); // put seq number to acknowledge in packet
+        } catch (Exception e) {
+            System.err.printf("%n%nA fatal error occurred!%n%n");
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        sendData = b.array();
+        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAdress, portNumber);
+        sender.send(sendPacket);
+    }
+
     // Sends a distance vector to the other two vectors
     private static void sendDistanceVector(int[] vector, int id, DatagramSocket sender) {
-        ByteBuffer b = ByteBuffer.allocate(16);
+        ByteBuffer b = ByteBuffer.allocate(24);
         // Write the input vector to a data stream
         try {
             b.putInt(id);
+            b.putInt(0); // this is not an ack
+            b.putInt(0); // put sequence number, not used currently 
             for (int i : vector) {
                 b.putInt(i);
             }
@@ -213,7 +252,6 @@ public class DVR {
         final byte[] sendDataFinal = sendData;
         final DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAdress, portNumber);
         senderSocket.send(sendPacket);
-        
 
         TimerTask timerTask = new TimerTask() {
             @Override
@@ -228,10 +266,16 @@ public class DVR {
         };
         if (portNumber == ports[(me + 1) % 3]) {
             sent[0] = true;
+            if (timers[0] != null) {
+                timers[0].cancel();
+            }
             timers[0] = new Timer();
             timers[0].schedule(timerTask, 1000);
         } else if (portNumber == ports[(me + 2) % 3]) {
             sent[1] = true;
+            if (timers[1] != null) {
+                timers[1].cancel();
+            }
             timers[1] = new Timer();
             timers[1].schedule(timerTask, 1000);
         }
