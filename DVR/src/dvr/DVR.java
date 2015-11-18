@@ -178,7 +178,7 @@ public class DVR {
         for (int i = 0; i < 3; i++) {
             if (i != id) {
                 try {
-                    sendPacket(0, sendData, sender, false, ports[i]);
+                    sendPacket(0, sendData, sender, ports[i]);
                 } catch (Exception e) {
                     e.printStackTrace();
                     System.out.printf("%nSomething bad happened while trying to send the packet, carry on%n");
@@ -207,21 +207,20 @@ public class DVR {
     }
 
     // sends packet and sets up timer
-    public static void sendPacket(int seq, byte[] sendData, DatagramSocket senderSocket, boolean drop, int portNumber)
+    public static void sendPacket(int seq, byte[] sendData, DatagramSocket senderSocket, int portNumber)
             throws Exception {
         final int seqFinal = seq;
         final byte[] sendDataFinal = sendData;
         final DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAdress, portNumber);
-        if (!drop) {
-            senderSocket.send(sendPacket);
-        }
+        senderSocket.send(sendPacket);
+        
 
         TimerTask timerTask = new TimerTask() {
             @Override
             public void run() {
                 try {
                     //System.out.println("Packet " + seqFinal + " times out, resend packet " + seqFinal);
-                    sendPacket(seqFinal, sendDataFinal, senderSocket, false, portNumber);
+                    sendPacket(seqFinal, sendDataFinal, senderSocket, portNumber);
                 } catch (Exception e) {
 
                 }
