@@ -32,14 +32,13 @@ public class DVR {
     private static int seq = -1;            // the value of the most recently sent sequence number, initialized to none sent
 
     public static void main(String[] args) throws Exception {
+        // Read in router id
         System.out.print("Enter the router's ID: ");
         BufferedReader buff = new BufferedReader(new InputStreamReader(System.in));
-
-        // Read in router id
-        char id = buff.readLine().charAt(0); // place holder; my id
+        char id = buff.readLine().charAt(0); // my id
         id = Character.toUpperCase(id);      // Forced formatting
         me = -1; // index of this router
-
+        // get index of this router from received id
         if (id == 'X') {
             me = X;
         } else if (id == 'Y') {
@@ -54,12 +53,9 @@ public class DVR {
         // Get port number and distance vector for this router and ports of
         // the other two routers
         FileReader file = new FileReader("configuration.txt");
-
         buff = new BufferedReader(file);
-
-        // Get port numbers
         String line = buff.readLine();
-        String[] fileData = line.split("\\s+");
+        String[] fileData = line.split("\\s+");     // make array of strings representing port numbers
         ports = new int[ROUTERS];
         for (int i = 0; i < ports.length; i++) {
             ports[i] = Integer.valueOf(fileData[i]);
@@ -132,7 +128,7 @@ public class DVR {
                 sendAck(recSeq, ports[recID], socket); // send acknowledgement
                 int[] testVec = {0, 0, 0};
                 if (!Arrays.equals(tempVec, testVec)) {
-                    char recIDChar = '-';
+                    char recIDChar = '-'; // place holder value
                     if (recID == 0) {
                         recIDChar = 'X';
                     } else if (recID == 1) {
