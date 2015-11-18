@@ -17,6 +17,7 @@ public class DVR {
     final static int Y = 1;
     final static int Z = 2;
     
+    final static char[] IDs = {'X', 'Y', 'Z'};  // The IDs of each router in the network
     
     private static int me;                  // my index for the ports, neighVec and distVecs arrays
 
@@ -24,7 +25,6 @@ public class DVR {
     private static int[] neighVec;          // the direct cost to each neighbor
     private static int[][] distVecs;        // the shortest distance cost vector to each node from each node
 
-    final static char[] ids = {'X', 'Y', 'Z'};
     
     private static byte[] sendData;         // data to be sent
     private static InetAddress IPAdress;    // holds the IPAddress of the system
@@ -145,8 +145,8 @@ public class DVR {
                     printDistanceVector(tempVec);
                     // Check to see if an update occurred
                     distVecs[recID] = tempVec;
-                    char myId = ids[me];
                     boolean update = updateDistanceVector();
+                    char myId = IDs[me];
                     if (update) {
                         System.out.printf("Distance vector on router %c is updated to:\n", myId);
                         printDistanceVector(distVecs[me]);
